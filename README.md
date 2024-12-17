@@ -2,7 +2,7 @@
 **WARNING: This project is a work in progress and may produce incorrect results.**
 
 ## Description
-The goal of this project is to provde an open source implementation of recent research in the field of hypersonic Busemann inlet design -- specifically the work done by Sannu Mölder in "The Busemann Air Intake for Hypersonic Speeds" (DOI: 10.5772/intechopen.82736). The overarching goal is to produce Busemann inlet modules which Mölder calls "wavetrapper" inlets which are more suited for integration into supersonic aircraft due to their self starting nature and off design performance. 
+This project provides an open source implementation of recent research in the field of hypersonic Busemann inlet design -- specifically the work done by Sannu Mölder in "The Busemann Air Intake for Hypersonic Speeds" (DOI: 10.5772/intechopen.82736). The overarching goal is to produce Busemann inlet modules which Mölder calls "wavetrapper" inlets which are more suited for integration into supersonic aircraft due to their self starting nature and off design performance. 
 
 
 
