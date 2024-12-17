@@ -20,7 +20,7 @@ y_2 \\
 
 These equations are contained in "taylor_maccoll.py", where scipy's solve_ivp function is used to perform 4th Order Runge-Kutta integration from the perscribed conic shock angle until the flowfield is parallel with the axial direction. The result of this integration is the Busemann flow field. A single streamtrace is then created following the velocity vector described by the flowfield. 
 
-![Image showing the Busemann inlet streamtrace](https://cdnintech.com/media/chapter/66839/1512345123/media/F3.png)
+![Image showing the Busemann inlet streamtrace](https://github.com/tycho-0/busemann_inlet_generator/blob/main/images/streamtracing.png)
 
 
 ## Dependencies
