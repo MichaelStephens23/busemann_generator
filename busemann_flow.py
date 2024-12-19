@@ -1,9 +1,10 @@
+import math
 import numpy as np  # type: ignore
 from scipy.integrate import solve_ivp # type: ignore
 from taylor_maccoll import taylor_maccoll
 import matplotlib.pyplot as plt
 
-class InletDesign:
+class Inlet:
     def __init__(self, mach_2:float, theta_23_degrees:float, gamma:float, isolator_radius:float, offset:float, truncation_angle:float):
         self.mach_2 = mach_2
         self.theta_23_degrees = theta_23_degrees
@@ -13,7 +14,7 @@ class InletDesign:
         self.truncation_angle = truncation_angle
 
         # Resample point count for wavetrapper mesh
-        self.streamtrace_point_count = 100
+        self.streamtrace_point_count = 50
 
         # Design Outputs
         self.wavetrapper_x = []
@@ -53,7 +54,7 @@ class InletDesign:
         self.wavetrapper_inlet()
 
 
-    def wavetrapper_inlet(self):
+    def wavetrapper_inlet(self, show_plot=False):
         """
         Calculates the flow field and streamlines of a wavetrapper inlet and writes a CSM file representing the inlet.
 
@@ -105,7 +106,6 @@ class InletDesign:
         theta = sol.t
         vr = sol.y[0]
         vtheta = sol.y[1]
-        cone_angle = np.degrees(theta[-1])
         m = np.sqrt(vr**2 + vtheta**2)
         print(f'Freestream Mach: {m[-1]:.3f}')
 
@@ -126,27 +126,11 @@ class InletDesign:
                 theta = theta[:i+1]
                 break
 
+        # Mark the inflection point index for plotting purposes
         inflection_point = np.argmin(np.abs(vr))
-        streamtrace_x = r * np.cos(theta)
-        streamtrace_y = r * np.sin(theta)
-
-
-        # plt.figure()
-        # plt.plot(streamtrace_x, streamtrace_y, 'k', 
-        #         [0, streamtrace_x[0]], [0, streamtrace_y[0]], 'r', 
-        #         [0, streamtrace_x[inflection_point]], [0, streamtrace_y[inflection_point]], 'b', 
-        #         [0, streamtrace_x[-1]], [0, streamtrace_y[-1]], 'g')
-        # plt.plot(streamtrace_x, -streamtrace_y, 'k', 
-        #         [0, streamtrace_x[0]], [0, -streamtrace_y[0]], 'r', 
-        #         [0, streamtrace_x[inflection_point]], [0, -streamtrace_y[inflection_point]], 'b', 
-        #         [0, streamtrace_x[-1]], [0, -streamtrace_y[-1]], 'g')
-        # plt.axis('equal')
-        # plt.grid(True)
-        # plt.legend(['Busemann Inlet Surface', 'Conic Shock', 'Inflection Point', 'Termination Point'])
-        # #plt.show()
 
         # Create wavetrapper
-        phi = np.radians(np.arange(0, 362, 2))  # Convert degrees to radians, match MATLAB's 0:2:360
+        phi = np.radians(np.arange(0, 360, 2))  # Convert degrees to radians, match MATLAB's 0:2:360
         wavetrapper_x = np.zeros((len(r), len(phi)))
         wavetrapper_y = np.zeros((len(r), len(phi)))
         wavetrapper_z = np.zeros((len(r), len(phi)))
@@ -193,35 +177,38 @@ class InletDesign:
             self.wavetrapper_y_resample[:, j] = wavetrapper_y[theta_resample_indices, j]
             self.wavetrapper_z_resample[:, j] = wavetrapper_z[theta_resample_indices, j]
 
-        # Preparing vertices for plotting
-        vertices = np.zeros((len(phi) * n_samples, 3))
-        vert_count = 0
+        if show_plot:
+            # Show a 2D plot illustrating the features of this wavetrapper
+            plt.figure(1)
+            bottom_index = math.ceil(len(wavetrapper_x[0]) / 2)
+            plt.plot(wavetrapper_x[:,0], wavetrapper_y[:,0], 'k', 
+                    [0, wavetrapper_x[0,0]], [0, wavetrapper_y[0,0]], 'r', 
+                    [0, wavetrapper_x[inflection_point,0]], [0, wavetrapper_y[inflection_point,0]], 'b', 
+                    [0, wavetrapper_x[-1,0]], [0, wavetrapper_y[-1,0]], 'g')
+            plt.plot(wavetrapper_x[:,bottom_index], wavetrapper_y[:,bottom_index], 'k', 
+                    [0, wavetrapper_x[0,bottom_index]], [0, wavetrapper_y[0,bottom_index]], 'r', 
+                    [0, wavetrapper_x[inflection_point,bottom_index]], [0, wavetrapper_y[inflection_point,bottom_index]], 'b', 
+                    [0, wavetrapper_x[-1,bottom_index]], [0, wavetrapper_y[-1,bottom_index]], 'g')
+            plt.axis('equal')
+            plt.grid(True)
+            plt.legend(['Busemann Inlet Surface', 'Conic Shock', 'Inflection Point', 'Termination Point'])
+            plt.show()
 
-        for j in range(len(phi)):
-            for i in range(n_samples):
-                vertices[vert_count, :] = [self.wavetrapper_x_resample[i, j], self.wavetrapper_y_resample[i, j], self.wavetrapper_z_resample[i, j]]
-                vert_count += 1
+            # Plot all streamtraces showing a 3D representation of the wavetrapper
+            fig = plt.figure(2)
+            ax = fig.add_subplot(111, projection='3d')
+            ax.clear()
 
-        # Plotting
-        fig = plt.figure(6)
-        ax = fig.add_subplot(111, projection='3d')
-        ax.clear()
+            for j in range(len(phi)):
+                ax.plot(wavetrapper_x[:, j], wavetrapper_y[:, j], wavetrapper_z[:, j], color='k', alpha=0.2)  # Adjust alpha for line transparency
+                ax.plot(wavetrapper_x[:, j], wavetrapper_y[:, j], -wavetrapper_z[:, j], color='k', alpha=0.2)  # Adjust alpha for line transparency
 
-        # Creating a surface plot, using edge colors to interpolate between points
-        # Note: Matplotlib doesn't directly support surf() with 'EdgeColor'='interp', 
-        # so we'll use a workaround by plotting lines between points for a similar effect.
-        for j in range(len(phi)):
-            ax.plot(wavetrapper_x[:, j], wavetrapper_y[:, j], wavetrapper_z[:, j], color='k', alpha=0.5)  # Adjust alpha for line transparency
-            ax.plot(wavetrapper_x[:, j], wavetrapper_y[:, j], -wavetrapper_z[:, j], color='k', alpha=0.5)  # Adjust alpha for line transparency
-
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
-        #plt.grid(True)
-        ax.set_aspect('equal')
-        #plt.colorbar(ax.plot_surface(wavetrapper_x, wavetrapper_y, wavetrapper_z, facecolors=plt.cm.jet(wavetrapper_mach/np.max(wavetrapper_mach)), rstride=1, cstride=1, alpha=0.2, linewidth=0), shrink=0.5, aspect=5).set_label('Surface Mach', fontsize=14)
-
-        #plt.show()
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
+            ax.set_zlabel('z')
+            plt.grid(True)
+            ax.set_aspect('equal')
+            plt.show()
 
         self.wavetrapper_x = wavetrapper_x
         self.wavetrapper_y = wavetrapper_y
@@ -233,7 +220,7 @@ class InletDesign:
         self.write_csm()
 
 
-    def wavetrapper_inlet_simple(self, write_file=False):
+    def wavetrapper_inlet_simple(self):
         """
         Calculates the flow field and streamlines of a wavetrapper inlet.
 
@@ -257,6 +244,7 @@ class InletDesign:
         list
             [freestream_mach, inlet_diameter, isolator_mach, stagnation_pressure_ratio]
         """
+        # Import parameters from the inlet class
         mach_2 = self.mach_2
         theta_23_degrees = self.theta_23_degrees
         gamma = self.gamma
@@ -264,7 +252,7 @@ class InletDesign:
         offset = self.offset
         truncation_angle = self.truncation_angle
         
-        
+        # Calculate the required conic shock deflection angle, and corresponding velocity components 
         theta_23 = np.radians(theta_23_degrees)
         tan_delta = 2 * (1/np.tan(theta_23)) * (((mach_2**2 * np.sin(theta_23)**2) - 1) / (mach_2**2 * (gamma + np.cos(2 * theta_23)) + 2))
         delta_23 = np.arctan(tan_delta)
@@ -272,24 +260,23 @@ class InletDesign:
         u2 = mach_2 * np.cos(theta_23)
         v2 = -mach_2 * np.sin(theta_23)
 
+        # Calculate stagnation pressure ratio, and outflow Mach number
         stagnation_pressure_ratio = (((gamma+1)*mach_2**2 * np.sin(theta_23)**2) / ((gamma-1)*mach_2**2 * np.sin(theta_23)**2 + 2))**(gamma/(gamma-1)) * ((gamma+1) / (2*gamma*mach_2**2 * np.sin(theta_23)**2 - gamma + 1))**(1 / (gamma-1))
         mach_n3 = np.sqrt((1 + ((gamma-1)/2) * mach_2**2 * np.sin(theta_23)**2) / (gamma*mach_2**2 * np.sin(theta_23)**2 - ((gamma-1)/2)))
         mach_3 = mach_n3 / np.sin(theta_23 - delta_23)
-        #print(f'Isolator Mach Number: {mach_3:.4f}')
-        #print(f'Stagnation Pressure Ratio: {stagnation_pressure_ratio:.4f}')
 
         # Solve Taylor-Maccoll Equations
         opts = {'rtol': 1e-12, 'atol': 1e-12}
         sol = solve_ivp(lambda t, y: taylor_maccoll(t, y, gamma), [theta_2, np.pi-0.01], [u2, v2], method='RK45', events=check_busemann_limit, **opts)
 
+        # Extract radial and tangential velocity components along each ray marching ahead of the conic shock apex
         theta = sol.t
         vr = sol.y[0]
         vtheta = sol.y[1]
         cone_angle = np.degrees(theta[-1])
         m = np.sqrt(vr**2 + vtheta**2)
-        #print(f'Freestream Mach: {m[-1]:.3f}')
 
-        # Streamtrace
+        # Create the streamtrace for the inlet
         r2 = isolator_radius / np.sin(theta_2)
         r = np.zeros(len(theta))
         r[0] = r2
@@ -306,15 +293,7 @@ class InletDesign:
                 theta = theta[:i+1]
                 break
 
-        #inflection_point = np.argmin(np.abs(vr))
-
-        # Plotting
-        streamtrace_x = r * np.cos(theta)
-        streamtrace_y = r * np.sin(theta)
-
-        #write_csm(streamtrace_x, streamtrace_y)
-
-        # Create wavetrapper
+        # Set up variables for storing the wavetrapper upper and lower streamline coordinates
         phi = np.array([0,np.radians(180)]) # Convert degrees to radians, match MATLAB's 0:2:360
         wavetrapper_x = np.zeros((len(r), len(phi)))
         wavetrapper_y = np.zeros((len(r), len(phi)))
@@ -328,6 +307,7 @@ class InletDesign:
         wavetrapper_y[0, :] = isolator_radius * np.cos(phi) + offset
         wavetrapper_z[0, :] = isolator_radius * np.sin(phi)
 
+        # Calculate the polar coordinates of the streamtraces, then convert to cartesian coordinates
         for j in range(len(phi)):
             azimuth = np.arctan2(wavetrapper_z[0, j], wavetrapper_y[0, j])
             wavetrapper_x[0, j] = np.sqrt(wavetrapper_y[0, j]**2 + wavetrapper_z[0, j]**2) / np.tan(theta_2)
@@ -344,11 +324,12 @@ class InletDesign:
             wavetrapper_x[1:, j] = axial_dist[1:, j]
             wavetrapper_mach[:, j] = m[:len(r)]
 
+        # Store design parameters
         freestream_mach = m[-1]
-        #inlet_diameter = np.max(wavetrapper_y) - np.min(wavetrapper_y)
         inlet_diameter = wavetrapper_y[-1][0] + wavetrapper_y[-1][1]
         isolator_mach = mach_3
     
+        # Update the Inlet class with the design parameters
         self.freestream_mach = freestream_mach 
         self.inlet_diameter = inlet_diameter
         self.isolator_mach = isolator_mach
@@ -433,19 +414,14 @@ def check_busemann_limit(theta: float, y: np.ndarray) -> float:
     return crossflow_velocity
 
 
-# def run_csm(esp_path):
-#     # Run CSM
-#     csm_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'busemann.csm')
-#     subprocess.run(['csm', csm_path], check=True)
-
-
-
+## Test code for generating an example inlet
 if __name__ == '__main__':
-    mach_2 = 3.5748245130333514
-    theta_23_degrees = 21.39987416844946
+    mach_2 = 3.57
+    theta_23_degrees = 21.34
     gamma = 1.4
-    isolator_radius = 0.1016 / 2
+    isolator_radius = 0.1 / 2
     offset = 0.9 * isolator_radius
-    truncation_angle = 7.993605777301127e-15
-    inlet = InletDesign(mach_2=mach_2, theta_23_degrees=theta_23_degrees, gamma=gamma, isolator_radius=isolator_radius, offset=offset, truncation_angle=truncation_angle)
+    truncation_angle = 8e-15
+    inlet = Inlet(mach_2=mach_2, theta_23_degrees=theta_23_degrees, gamma=gamma, isolator_radius=isolator_radius, offset=offset, truncation_angle=truncation_angle)
     inlet.test_design()
+    inlet.wavetrapper_inlet(show_plot=True)
