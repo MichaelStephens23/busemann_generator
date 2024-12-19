@@ -6,6 +6,58 @@ import matplotlib.pyplot as plt
 
 class Inlet:
     def __init__(self, mach_2:float, theta_23_degrees:float, gamma:float, isolator_radius:float, offset:float, truncation_angle:float):
+        """
+        Initialize an instance of the Inlet class.
+        Parameters
+        ----------
+        mach_2 : float
+            The Mach number in front of the conic shock.
+        theta_23_degrees : float
+            The conic shock angle in degrees.
+        gamma : float
+            The ratio of specific heats.
+        isolator_radius : float
+            The radius of the isolator in meters.
+        offset : float
+            The percent distance from the center of the isolator to the bottom inlet wall in meters.
+        truncation_angle : float
+            Angle between freestream and the start of the inlet in degrees.
+
+        Attributes
+        ----------
+        mach_2 : float
+            The Mach number in front of the conic shock.
+        theta_23_degrees : float
+            The conic shock angle in degrees.
+        gamma : float
+            The ratio of specific heats.
+        isolator_radius : float
+            The radius of the isolator in meters.
+        offset : float
+            The percent distance from the center of the isolator to the bottom inlet wall in meters.
+        truncation_angle : float
+            Angle between freestream and the start of the inlet in degrees.
+        streamtrace_point_count : int
+            The number of points to resample for the wavetrapper mesh.
+        wavetrapper_x : list
+            The x-coordinates of the wavetrapper mesh.
+        wavetrapper_y : list
+            The y-coordinates of the wavetrapper mesh.
+        wavetrapper_z : list
+            The z-coordinates of the wavetrapper mesh.
+        rotation : list
+            The rotation angles for each streamtrace in the wavetrapper mesh.
+        scale : list
+            The scaling factors for each streamtrace in the wavetrapper mesh.
+        freestream_mach : float
+            The freestream Mach number.
+        inlet_diameter : float
+            The diameter of the inlet.
+        isolator_mach : float
+            The Mach number at the isolator.
+        stagnation_pressure_ratio : float
+            The stagnation pressure ratio.
+        """
         self.mach_2 = mach_2
         self.theta_23_degrees = theta_23_degrees
         self.gamma = gamma
@@ -28,9 +80,11 @@ class Inlet:
         self.isolator_mach = 0
         self.stagnation_pressure_ratio = 0
 
+
     # Methods
     
     def test_design(self):
+        # Tests the inputs of the Inlet class and shows the resulting design parameters. 
         self.wavetrapper_inlet_simple()
         print('Design Inputs:')
         print('----------------------------------')
@@ -47,9 +101,11 @@ class Inlet:
         print(f'\tinlet_diameter = {self.inlet_diameter}')
         print(f'\tisolator_mach = {self.isolator_mach}')
         print(f'\tstagnation_pressure_ratio = {self.stagnation_pressure_ratio}')
+
         
 
     def generate(self):
+        # Generates the inlet design, populating the design parameters as well as the vertices describing the 3D shape. 
         self.wavetrapper_inlet_simple()
         self.wavetrapper_inlet()
 

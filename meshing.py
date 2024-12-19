@@ -1,11 +1,11 @@
-from busemann_flow import InletDesign
+from busemann_flow import Inlet
 import open3d as o3d  # type: ignore
 import numpy as np  # type: ignore
 import math
 
 
 class InletMesh:
-    def __init__(self, inlet: InletDesign):
+    def __init__(self, inlet: Inlet):
         self.inlet = inlet
         self.inlet.streamtrace_point_count = 90
         self.inlet.generate()
